@@ -1,0 +1,22 @@
+<!-- Arquivo: medico.php -->
+<?php include('conexao.php'); ?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SIRF - Médico</title>
+</head>
+<body>
+    <h2>Bem-vindo, Médico</h2>
+    <p>Cadastrar receita médica:</p>
+    <form action="salvar_receita.php" method="POST">
+        <label>Paciente (CPF):</label>
+        <input type="text" name="cpf_paciente" required>
+        <br>
+        <label>Descrição da Receita:</label>
+        <textarea name="descricao" required></textarea>
+        <br>
+        <button type="submit">Salvar</button>
+    </form>
+</body>
+</html>
+

@@ -1,0 +1,21 @@
+<!-- Arquivo: index.php (Página Inicial) -->
+<?php include('conexao.php'); ?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SIRF - Login</title>
+</head>
+<body>
+    <h2>Bem-vindo ao SIRF</h2>
+    <form action="login.php" method="POST">
+        <label>Usuário (CPF ou CRM):</label>
+        <input type="text" name="usuario" required>
+        <br>
+        <label>Senha:</label>
+        <input type="password" name="senha" required>
+        <br>
+        <button type="submit">Entrar</button>
+    </form>
+</body>
+</html>
+
