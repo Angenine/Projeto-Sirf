@@ -1,21 +1,87 @@
 <!-- Arquivo: index.php (Página Inicial) -->
+
 <?php include('conexao.php'); ?>
+<!-- Inclui o arquivo de conexão com o banco de dados, necessário para futuras interações -->
+
 <!DOCTYPE html>
-<html>
+<html lang="pt-br"> <!-- Define o idioma da página como português do Brasil -->
 <head>
-    <title>SIRF - Login</title>
+    <meta charset="UTF-8"> <!-- Define o conjunto de caracteres da página para UTF-8 -->
+    <title>SIRF - Login</title> <!-- Define o título da aba do navegador -->
+
+    <!-- Estilo CSS incorporado para melhorar a aparência da página -->
+    <style>
+        body {
+            font-family: Arial, sans-serif; /* Define a fonte padrão da página */
+            background: #f4f4f4; /* Define a cor de fundo */
+            display: flex; /* Usa o modelo flexbox para alinhar os itens */
+            align-items: center; /* Centraliza verticalmente */
+            justify-content: center; /* Centraliza horizontalmente */
+            height: 100vh; /* Define a altura da tela como 100% da altura da viewport */
+            margin: 0; /* Remove margens padrão do body */
+        }
+        .login-container {
+            background: #fff; /* Fundo branco do formulário */
+            padding: 30px 40px; /* Espaçamento interno */
+            border-radius: 10px; /* Cantos arredondados */
+            box-shadow: 0 0 15px rgba(0,0,0,0.1); /* Sombra suave ao redor do container */
+            width: 100%; /* Ocupa 100% da largura possível */
+            max-width: 500px; /* Limita a largura máxima */
+            text-align: center; /* Centraliza o conteúdo dentro do container */
+        }
+        h2 {
+            margin-bottom: 20px; /* Espaçamento abaixo do título */
+            color: #333; /* Cor do texto do título */
+        }
+        label {
+            display: block; /* Faz com que o label ocupe uma linha inteira */
+            text-align: left; /* Alinha o texto à esquerda */
+            margin: 10px 0 5px; /* Espaçamento ao redor do label */
+            color: #555; /* Cor do texto do label */
+        }
+        input {
+            width: 95%; /* Faz o input ocupar toda a largura disponível */
+            padding: 10px; /* Espaçamento interno */
+            margin-bottom: 15px; /* Espaçamento abaixo do input */
+            border: 1px solid #ccc; /* Borda cinza clara */
+            border-radius: 5px; /* Cantos arredondados */
+        }
+        button {
+            background-color: #007BFF; /* Cor de fundo azul */
+            color: white; /* Cor do texto */
+            border: none; /* Remove borda padrão */
+            padding: 12px 20px; /* Espaçamento interno */
+            border-radius: 5px; /* Cantos arredondados */
+            cursor: pointer; /* Cursor do mouse em forma de mãozinha */
+            font-size: 16px; /* Tamanho da fonte */
+            width: 100%; /* Ocupa toda a largura */
+        }
+        button:hover {
+            background-color: #0056b3; /* Cor de fundo ao passar o mouse */
+        }
+    </style>
 </head>
+
 <body>
-    <h2>Bem-vindo ao SIRF</h2>
-    <form action="login.php" method="POST">
-        <label>Usuário (CPF ou CRM):</label>
-        <input type="text" name="usuario" required>
-        <br>
-        <label>Senha:</label>
-        <input type="password" name="senha" required>
-        <br>
-        <button type="submit">Entrar</button>
-    </form>
+    <!-- Container central do formulário de login -->
+    <div class="login-container">
+        <h2>Bem-vindo ao SIRF</h2> <!-- Título de boas-vindas -->
+
+        <!-- Formulário de login -->
+        <form action="login.php" method="POST"> <!-- Envia os dados via POST para login.php -->
+
+            <!-- Campo para entrada do usuário (CPF ou CRM) -->
+            <label for="usuario">Usuário (CPF ou CRM):</label>
+            <input type="text" id="usuario" name="usuario" required> <!-- Campo de texto obrigatório -->
+
+            <!-- Campo para entrada da senha -->
+            <label for="senha">Senha:</label>
+            <input type="password" id="senha" name="senha" required> <!-- Campo de senha obrigatório -->
+
+            <!-- Botão para submeter o formulário -->
+            <button type="submit">Entrar</button>
+        </form>
+    </div>
 </body>
 </html>
 
