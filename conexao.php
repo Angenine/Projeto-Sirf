@@ -1,16 +1,12 @@
 <?php
-// Arquivo: conexao.php
-// Configuração da conexão com o banco de dados
-$host = "localhost";
-$dbname = "sirf";
-$username = "root";
-$password = "";
+$host = 'localhost';
+$usuario = 'root';
+$senha = '';
+$banco = 'sirf';
 
-try {
-    $conn = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die("Erro na conexão: " . $e->getMessage());
+$conexao = new mysqli($host, $usuario, $senha, $banco);
+
+if ($conexao->connect_error) {
+    die("Erro na conexão: " . $conexao->connect_error);
 }
 ?>
-

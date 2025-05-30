@@ -1,13 +1,20 @@
-<!-- Arquivo: salvar_receita.php -->
 <?php
 include('conexao.php');
+
 $cpf_paciente = $_POST['cpf_paciente'];
 $descricao = $_POST['descricao'];
 
-$query = $conn->prepare("INSERT INTO receitas (cpf_paciente, descricao) VALUES (:cpf, :descricao)");
-$query->bindParam(':cpf', $cpf_paciente);
-$query->bindParam(':descricao', $descricao);
-$query->execute();
+// Corrigir o nome da variável de conexão para $conexao
+$sql = "INSERT INTO receitas (cpf_paciente, descricao) VALUES (?, ?)";
+$stmt = $conexao->prepare($sql);  // Era $conn, agora está certo
+$stmt->bind_param("ss", $cpf_paciente, $descricao);
 
-echo "Receita salva com sucesso!";
+if ($stmt->execute()) {
+    echo "Receita cadastrada com sucesso!";
+} else {
+    echo "Erro ao cadastrar receita: " . $conexao->error;
+}
+
+$stmt->close();
+$conexao->close();
 ?>
