@@ -1,5 +1,43 @@
-<?php include('conexao.php'); ?>
-
+<?php
+include('conexao.php');
+$tipo_usuario = $_GET['tipo'] ?? '';
+$mensagem = '';
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $nome = $_POST['nome'];
+    $email = $_POST['email'];
+    $senha = password_hash($_POST['senha'], PASSWORD_DEFAULT);
+    $tipo = $_POST['tipo'];
+    if ($tipo == 'medico') $tipo = 'médico';
+    if ($tipo == 'paciente') $tipo = 'paciente';
+    $crm = $_POST['crm'] ?? null;
+    $cpf = $_POST['cpf'] ?? null;
+    $sql = "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)";
+    $stmt = $conexao->prepare($sql);
+    $stmt->bind_param("ssss", $nome, $email, $senha, $tipo);
+    if ($stmt->execute()) {
+        $usuario_id = $conexao->insert_id;
+        $stmt->close();
+        if ($tipo == 'médico') {
+            $sql2 = "INSERT INTO medicos (id, crm) VALUES (?, ?)";
+            $stmt2 = $conexao->prepare($sql2);
+            $stmt2->bind_param("is", $usuario_id, $crm);
+            $stmt2->execute();
+            $stmt2->close();
+        } else {
+            $sql2 = "INSERT INTO pacientes (id, cpf) VALUES (?, ?)";
+            $stmt2 = $conexao->prepare($sql2);
+            $stmt2->bind_param("is", $usuario_id, $cpf);
+            $stmt2->execute();
+            $stmt2->close();
+        }
+        $mensagem = "<div class='mensagem' style='color:green;'>Usuário cadastrado com sucesso!</div>";
+    } else {
+        $mensagem = "<div class='mensagem'>Erro ao cadastrar: " . $stmt->error . "</div>";
+        $stmt->close();
+    }
+    $conexao->close();
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,7 +45,7 @@
     <meta charset="UTF-8">
     <style>
         body {
-            background: #f4f6f8;
+            background: #eaf2f8;
             font-family: Arial, Helvetica, sans-serif;
             margin: 0;
             padding: 0;
@@ -43,7 +81,7 @@
         }
         button {
             width: 100%;
-            background: #007bff;
+            background: #3498db;
             color: #fff;
             border: none;
             padding: 12px;
@@ -54,14 +92,14 @@
             transition: background 0.2s;
         }
         button:hover {
-            background: #0056b3;
+            background: #2980b9;
         }
         .login-link {
             text-align: center;
             margin-top: 12px;
         }
         .login-link a {
-            color: #007bff;
+            color: #3498db;
             text-decoration: none;
         }
         .login-link a:hover {
@@ -82,45 +120,39 @@
 <body>
     <div class="container">
         <h2>Cadastro</h2>
-        <?php
-        if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            $nome = $_POST['nome'];
-            $email = $_POST['email'];
-            $senha = password_hash($_POST['senha'], PASSWORD_DEFAULT);
-            $tipo = $_POST['tipo'];
-
-            $sql = "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)";
-            $stmt = $conexao->prepare($sql);
-            $stmt->bind_param("ssss", $nome, $email, $senha, $tipo);
-
-            if ($stmt->execute()) {
-                echo "<div class='mensagem' style='color:green;'>Usuário cadastrado com sucesso! <a href='login.php'>Fazer login</a></div>";
-            } else {
-                echo "<div class='mensagem'>Erro ao cadastrar: " . $stmt->error . "</div>";
-            }
-
-            $stmt->close();
-            $conexao->close();
-        }
-        ?>
-        <form method="POST" action="cadastro.php">
+        <?= $mensagem ?>
+        <form method="POST" action="cadastro.php<?= $tipo_usuario ? '?tipo=' . $tipo_usuario : '' ?>">
             <label>Nome:</label>
             <input type="text" name="nome" required>
-
             <label>Email:</label>
             <input type="email" name="email" required>
-
             <label>Senha:</label>
-            <input type="password" name="senha" required>
-
+            <input type="password" name="senha" id="senha" required>
             <label>Tipo de usuário:</label>
-            <select name="tipo" required>
-                <option value="medico">Médico</option>
-                <option value="paciente">Paciente</option>
+            <select name="tipo" id="tipo" required onchange="mostrarCamposAdicionais()">
+                <option value="medico" <?= $tipo_usuario == 'medico' || $tipo_usuario == 'médico' ? 'selected' : '' ?>>Médico</option>
+                <option value="paciente" <?= $tipo_usuario == 'paciente' ? 'selected' : '' ?>>Paciente</option>
             </select>
-
+            <div id="campo_crm" style="display:none;">
+                <label for="crm">CRM:</label>
+                <input type="text" name="crm" id="crm" maxlength="20">
+            </div>
+            <div id="campo_cpf" style="display:none;">
+                <label for="cpf">CPF:</label>
+                <input type="text" name="cpf" id="cpf" maxlength="14">
+            </div>
             <button type="submit">Cadastrar</button>
         </form>
+        <script>
+        function mostrarCamposAdicionais() {
+            var tipo = document.getElementById('tipo').value;
+            document.getElementById('campo_crm').style.display = (tipo === 'medico' || tipo === 'médico') ? 'block' : 'none';
+            document.getElementById('campo_cpf').style.display = (tipo === 'paciente') ? 'block' : 'none';
+        }
+        window.onload = function() {
+            mostrarCamposAdicionais();
+        };
+        </script>
         <div class="login-link">
             Já tem conta? <a href="login.php">Faça login</a>
         </div>
