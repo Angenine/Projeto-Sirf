@@ -12,7 +12,7 @@ if (isset($_POST['acao']) && $_POST['acao'] == 'login') {
     $senha = $_POST['senha'];
     $tipo = $tipo_usuario;
 
-    if ($tipo == 'medico') $tipo = 'médico';
+    if ($tipo == 'medico' || $tipo == 'médico') $tipo = 'médico';
     if ($tipo == 'paciente') $tipo = 'paciente';
 
     $sql = "SELECT * FROM usuarios WHERE email = ? AND tipo = ?";
@@ -128,6 +128,7 @@ if (isset($_POST['acao']) && $_POST['acao'] == 'login') {
                 <button type="submit">Entrar</button>
             </form>
             <p class="login-link">Não tem conta? <a href="#" onclick="mostrarCadastro();return false;">Cadastre-se</a></p>
+            <button onclick="window.location.href='index.html'" style="margin-top:10px;background:#ccc;color:#2c3e50;">Voltar</button>
         </div>
     </div>
 </body>

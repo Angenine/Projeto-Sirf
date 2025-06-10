@@ -22,6 +22,8 @@ CREATE TABLE medicos (
 CREATE TABLE pacientes (
     id INT PRIMARY KEY,
     cpf VARCHAR(14) UNIQUE NOT NULL,
+    data_nascimento DATE NOT NULL,
+    telefone VARCHAR(20) NOT NULL,
     FOREIGN KEY (id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
@@ -29,12 +31,19 @@ CREATE TABLE pacientes (
 CREATE TABLE receitas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cpf VARCHAR(14) NOT NULL,
+    nome_medico VARCHAR(100) NOT NULL,
     crm VARCHAR(20) NOT NULL,
     descricao TEXT NOT NULL,
     data_emissao DATE NOT NULL,
-    data_validade DATE NOT NULL,
     assinatura_digital VARCHAR(255) NOT NULL,
     FOREIGN KEY (cpf) REFERENCES pacientes(cpf) ON DELETE CASCADE,
     FOREIGN KEY (crm) REFERENCES medicos(crm) ON DELETE CASCADE
 );
+
+
+
+
+
+
+
 
