@@ -60,5 +60,3 @@ Todos os arquivos principais do sistema estão comentados, explicando:
 - A finalidade de cada bloco de código
 - O fluxo das principais funcionalidades (cadastro, login, emissão, edição, consulta, envio de e-mail)
 - Pontos importantes para manutenção e entendimento por outros desenvolvedores
-
-Caso precise de mais detalhes sobre algum arquivo ou funcionalidade, consulte os comentários no próprio código-fonte ou entre em contato com a equipe!
