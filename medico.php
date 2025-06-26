@@ -52,51 +52,70 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Recebe dados do formulário de paciente
         $nome_paciente = $_POST['nome_paciente'];
         $cpf_novo = $_POST['cpf_novo'];
+        $email_paciente = $_POST['email_paciente'];
         $data_nascimento = $_POST['data_nascimento'];
         $telefone = $_POST['telefone'];
 
-        // Verifica se o CPF já existe
-        $sql_check = "SELECT cpf FROM pacientes WHERE cpf = ?";
-        $stmt_check = $conexao->prepare($sql_check);
-        $stmt_check->bind_param("s", $cpf_novo);
-        $stmt_check->execute();
-        $stmt_check->store_result();
-
-        if ($stmt_check->num_rows > 0) {
-            // CPF já existe, faz UPDATE dos demais dados
-            $sql = "UPDATE pacientes SET data_nascimento = ?, telefone = ? WHERE cpf = ?";
-            $stmt = $conexao->prepare($sql);
-            $stmt->bind_param("sss", $data_nascimento, $telefone, $cpf_novo);
-            if ($stmt->execute()) {
-                $mensagem_paciente .= "<div class='mensagem-sucesso'>Dados do paciente atualizados com sucesso!</div>";
-            } else {
-                $mensagem_paciente .= "<div class='mensagem-erro'>Erro ao atualizar dados do paciente: " . $stmt->error . "</div>";
-            }
-            $stmt->close();
+        // Verifica se já existe um usuário com esse e-mail
+        $sql_check_email = "SELECT id FROM usuarios WHERE email = ?";
+        $stmt_check_email = $conexao->prepare($sql_check_email);
+        $stmt_check_email->bind_param("s", $email_paciente);
+        $stmt_check_email->execute();
+        $stmt_check_email->store_result();
+        if ($stmt_check_email->num_rows > 0) {
+            $mensagem_paciente .= "<div class='mensagem-erro'>Já existe um usuário cadastrado com este e-mail!</div>";
+            $stmt_check_email->close();
         } else {
-            // CPF não existe, faz INSERT
-            // Corrigido: não existe campo 'nome' em pacientes, só em usuarios
-            // Primeiro, cria o usuario
-            $sql_usuario = "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, '', '', 'paciente')";
-            $stmt_usuario = $conexao->prepare($sql_usuario);
-            $stmt_usuario->bind_param("s", $nome_paciente);
-            if ($stmt_usuario->execute()) {
-                $id_usuario = $stmt_usuario->insert_id;
-                $sql = "INSERT INTO pacientes (id, cpf, data_nascimento, telefone) VALUES (?, ?, ?, ?)";
+            $stmt_check_email->close();
+            // Verifica se o CPF já existe
+            $sql_check = "SELECT cpf FROM pacientes WHERE cpf = ?";
+            $stmt_check = $conexao->prepare($sql_check);
+            $stmt_check->bind_param("s", $cpf_novo);
+            $stmt_check->execute();
+            $stmt_check->store_result();
+
+            if ($stmt_check->num_rows > 0) {
+                // CPF já existe, faz UPDATE dos demais dados
+                // Atualiza também o e-mail na tabela usuarios
+                $sql_update_usuario = "UPDATE usuarios SET nome = ? WHERE id = (SELECT id FROM pacientes WHERE cpf = ?)";
+                $stmt_update_usuario = $conexao->prepare($sql_update_usuario);
+                $stmt_update_usuario->bind_param("ss", $nome_paciente, $cpf_novo);
+                $stmt_update_usuario->execute();
+                $stmt_update_usuario->close();
+                $sql = "UPDATE pacientes SET email = ?, data_nascimento = ?, telefone = ? WHERE cpf = ?";
                 $stmt = $conexao->prepare($sql);
-                $stmt->bind_param("isss", $id_usuario, $cpf_novo, $data_nascimento, $telefone);
+                $stmt->bind_param("ssss", $email_paciente, $data_nascimento, $telefone, $cpf_novo);
                 if ($stmt->execute()) {
-                    $mensagem_paciente .= "<div class='mensagem-sucesso'>Paciente cadastrado com sucesso!</div>";
+                    $mensagem_paciente .= "<div class='mensagem-sucesso'>Dados do paciente atualizados com sucesso!</div>";
                 } else {
-                    $mensagem_paciente .= "<div class='mensagem-erro'>Erro ao cadastrar paciente: " . $stmt->error . "</div>";
+                    $mensagem_paciente .= "<div class='mensagem-erro'>Erro ao atualizar dados do paciente: " . $stmt->error . "</div>";
                 }
                 $stmt->close();
             } else {
-                $mensagem_paciente .= "<div class='mensagem-erro'>Erro ao cadastrar usuário: " . $stmt_usuario->error . "</div>";
+                // CPF não existe, faz INSERT
+                // Cria o usuário na tabela usuarios
+                $senha_padrao = password_hash('123456', PASSWORD_DEFAULT); // Senha padrão para novo paciente
+                $sql_usuario = "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, 'paciente')";
+                $stmt_usuario = $conexao->prepare($sql_usuario);
+                $stmt_usuario->bind_param("sss", $nome_paciente, $email_paciente, $senha_padrao);
+                if ($stmt_usuario->execute()) {
+                    $id_usuario = $stmt_usuario->insert_id;
+                    $sql = "INSERT INTO pacientes (id, cpf, email, data_nascimento, telefone) VALUES (?, ?, ?, ?, ?)";
+                    $stmt = $conexao->prepare($sql);
+                    $stmt->bind_param("issss", $id_usuario, $cpf_novo, $email_paciente, $data_nascimento, $telefone);
+                    if ($stmt->execute()) {
+                        $mensagem_paciente .= "<div class='mensagem-sucesso'>Paciente cadastrado com sucesso!</div>";
+                    } else {
+                        $mensagem_paciente .= "<div class='mensagem-erro'>Erro ao cadastrar paciente: " . $stmt->error . "</div>";
+                    }
+                    $stmt->close();
+                } else {
+                    $mensagem_paciente .= "<div class='mensagem-erro'>Erro ao cadastrar usuário: " . $stmt_usuario->error . "</div>";
+                }
+                $stmt_usuario->close();
             }
-            $stmt_usuario->close();
+            $stmt_check->close();
         }
-        $stmt_check->close();
     }
 }
 
@@ -320,6 +339,8 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
                 <input type="text" id="nome_paciente" name="nome_paciente" required placeholder="Nome completo">
                 <label for="cpf_novo">CPF do Paciente:</label>
                 <input type="text" id="cpf_novo" name="cpf_novo" maxlength="14" required placeholder="CPF">
+                <label for="email_paciente">E-mail do Paciente:</label>
+                <input type="email" id="email_paciente" name="email_paciente" required placeholder="E-mail">
                 <label for="data_nascimento">Data de Nascimento:</label>
                 <input type="date" id="data_nascimento" name="data_nascimento" required>
                 <label for="telefone">Telefone:</label>

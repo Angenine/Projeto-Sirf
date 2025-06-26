@@ -1,6 +1,36 @@
 <?php
 include('conexao.php');
-// Página de exibição e envio de receita médica por e-mail
+// Página de exibição de receita médica (sem envio de e-mail)
+
+// Função para exibir a receita
+function exibir_receita($rec) {
+    // Cabeçalho da receita
+    echo "<div class='cabecalho-receita'>";
+    echo "<img src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png' alt='Cruz Vermelha' />";
+    echo "<span class='titulo'>Receita Médica</span>";
+    echo "<span style='font-size:13px;color:#888;'>SIRF</span>";
+    echo "</div>";
+    // Dados do paciente
+    echo "<div class='dados-paciente'><b>Paciente:</b> ".htmlspecialchars($rec['nome_paciente'])."<br>";
+    echo "<b>CPF:</b> ".htmlspecialchars($rec['cpf'])."<br>";
+    echo "<b>Data de Nascimento:</b> ".(isset($rec['data_nascimento']) ? date('d/m/Y', strtotime($rec['data_nascimento'])) : '')."<br>";
+    echo "<b>Data de Emissão:</b> ".date('d/m/Y', strtotime($rec['data_emissao']))."</div>";
+    // Descrição da receita
+    echo "<div class='dados-receita'><b>Descrição:</b><div class='descricao-receita'>".nl2br(htmlspecialchars($rec['descricao']))."</div></div>";
+    // Assinatura do médico
+    echo "<div class='assinatura'>";
+    echo "<div class='linha'></div>";
+    echo "<span class='nome-medico'>".htmlspecialchars($rec['nome_medico'])."</span><br>";
+    echo "<span class='crm'>CRM: ".htmlspecialchars($rec['crm'])."</span><br>";
+    echo "<span style='font-size:13px;color:#888;'>Assinatura Digital:</span><br>";
+    echo "<span style='font-size:13px;'>".nl2br(htmlspecialchars($rec['assinatura_digital']))."</span>";
+    echo "</div>";
+    // Botões de ação: imprimir e voltar
+    echo "<div class='actions'>";
+    echo "<button onclick=\"window.print()\">Imprimir</button>";
+    echo "<a href='medico.php' class='btn-link' style='background:#ccc;color:#2c3e50;'>Voltar</a>";
+    echo "</div>";
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -132,47 +162,17 @@ include('conexao.php');
 <body>
 <div class="container">
 <?php
-// ===================== EXIBE RECEITA PARA IMPRESSÃO/COMPARTILHAMENTO =====================
-// Se for GET com id, busca dados da receita para exibir e permitir imprimir/enviar email
+// Exibe receita normalmente (GET)
 if (isset($_GET['id'])) {
     $id = intval($_GET['id']);
-    $sql = "SELECT r.*, u.email, u.nome as nome_paciente FROM receitas r JOIN pacientes p ON r.cpf = p.cpf JOIN usuarios u ON p.id = u.id WHERE r.id = ?";
+    $sql = "SELECT r.*, u.nome as nome_paciente FROM receitas r JOIN pacientes p ON r.cpf = p.cpf JOIN usuarios u ON p.id = u.id WHERE r.id = ?";
     $stmt = $conexao->prepare($sql);
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result->num_rows > 0) {
         $rec = $result->fetch_assoc();
-        // Cabeçalho da receita
-        echo "<div class='cabecalho-receita'>";
-        echo "<img src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png' alt='Cruz Vermelha' />";
-        echo "<span class='titulo'>Receita Médica</span>";
-        echo "<span style='font-size:13px;color:#888;'>SIRF</span>";
-        echo "</div>";
-        // Dados do paciente
-        echo "<div class='dados-paciente'><b>Paciente:</b> ".htmlspecialchars($rec['nome_paciente'])."<br>";
-        echo "<b>CPF:</b> ".htmlspecialchars($rec['cpf'])."<br>";
-        echo "<b>Data de Nascimento:</b> ".(isset($rec['data_nascimento']) ? date('d/m/Y', strtotime($rec['data_nascimento'])) : '')."<br>";
-        echo "<b>Data de Emissão:</b> ".date('d/m/Y', strtotime($rec['data_emissao']))."</div>";
-        // Descrição da receita
-        echo "<div class='dados-receita'><b>Descrição:</b><div class='descricao-receita'>".nl2br(htmlspecialchars($rec['descricao']))."</div></div>";
-        // Assinatura do médico
-        echo "<div class='assinatura'>";
-        echo "<div class='linha'></div>";
-        echo "<span class='nome-medico'>".htmlspecialchars($rec['nome_medico'])."</span><br>";
-        echo "<span class='crm'>CRM: ".htmlspecialchars($rec['crm'])."</span><br>";
-        echo "<span style='font-size:13px;color:#888;'>Assinatura Digital:</span><br>";
-        echo "<span style='font-size:13px;'>".nl2br(htmlspecialchars($rec['assinatura_digital']))."</span>";
-        echo "</div>";
-        // Botões de ação: imprimir, enviar por e-mail, voltar
-        echo "<div class='actions'>";
-        echo "<button onclick=\"window.print()\">Imprimir</button>";
-        echo "<form method='post' style='display:inline;'>"
-            . "<input type='hidden' name='id' value='" . $id . "'>"
-            . "<button type='submit' name='enviar_email' style='background:#28a745;border:none;color:#fff;padding:12px 24px;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer;transition:background 0.2s;margin:5px 8px 0 0;'>Enviar por E-mail</button>"
-            . "</form>";
-        echo "<a href='medico.php' class='btn-link' style='background:#ccc;color:#2c3e50;'>Voltar</a>";
-        echo "</div>";
+        exibir_receita($rec);
     } else {
         echo "<div class='mensagem-erro'>Receita não encontrada.</div>";
     }
@@ -181,97 +181,7 @@ if (isset($_GET['id'])) {
     echo "</div></body></html>";
     exit();
 }
-
-// ===================== ENVIO DE RECEITA POR E-MAIL =====================
-// Se for POST para enviar email
-if (isset($_POST['enviar_email']) && isset($_POST['id'])) {
-    ob_start(); // Garante que não haja problemas de buffer
-    $id = intval($_POST['id']);
-    // Busca os dados da receita e do paciente
-    $sql = "SELECT r.*, u.email, u.nome as nome_paciente FROM receitas r JOIN pacientes p ON r.cpf = p.cpf JOIN usuarios u ON p.id = u.id WHERE r.id = ?";
-    $stmt = $conexao->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $mensagem_email = '';
-    if ($result->num_rows > 0) {
-        $rec = $result->fetch_assoc();
-        $email_paciente = $rec['email'];
-        $nome_paciente = $rec['nome_paciente'];
-        $descricao = $rec['descricao'];
-        $assinatura_receita = $rec['assinatura_digital'];
-        $nome_medico = $rec['nome_medico'];
-        $crm = $rec['crm'];
-        $data_emissao = date('d/m/Y', strtotime($rec['data_emissao']));
-        $assunto = "Nova Receita Médica";
-        // Corpo do e-mail enviado ao paciente
-        $corpo = "Olá $nome_paciente,\n\nVocê recebeu uma nova receita médica.\n\n";
-        $corpo .= "Paciente: $nome_paciente\n";
-        $corpo .= "CPF: {$rec['cpf']}\n";
-        $corpo .= "Data de Nascimento: ".(isset($rec['data_nascimento']) ? date('d/m/Y', strtotime($rec['data_nascimento'])) : '')."\n";
-        $corpo .= "Data de Emissão: $data_emissao\n";
-        $corpo .= "\nDescrição da Receita:\n$descricao\n";
-        $corpo .= "\nMédico Responsável: $nome_medico\nCRM: $crm\n";
-        $corpo .= "Assinatura Digital: $assinatura_receita\n";
-        $corpo .= "\nAtenciosamente, SIRF";
-        $headers = "From: sirf@seudominio.com\r\nContent-Type: text/plain; charset=UTF-8";
-        // Envio do e-mail
-        if (empty($email_paciente)) {
-            $mensagem_email = "<div class='mensagem-erro'>O e-mail do paciente não está cadastrado. Não foi possível enviar a receita.</div>";
-        } else if (mail($email_paciente, $assunto, $corpo, $headers)) {
-            $mensagem_email = "<div class='mensagem-sucesso'>E-mail enviado para o paciente com sucesso!</div>";
-        } else {
-            $mensagem_email = "<div class='mensagem-erro'>Não foi possível enviar o e-mail ao paciente. Verifique a configuração do servidor de e-mail.</div>";
-        }
-    } else {
-        $mensagem_email = "<div class='mensagem-erro'>Receita não encontrada.</div>";
-    }
-    $stmt->close();
-    // Exibe novamente a receita após o envio do e-mail
-    $sql = "SELECT r.*, u.email, u.nome as nome_paciente FROM receitas r JOIN pacientes p ON r.cpf = p.cpf JOIN usuarios u ON p.id = u.id WHERE r.id = ?";
-    $stmt = $conexao->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows > 0) {
-        $rec = $result->fetch_assoc();
-        echo $mensagem_email;
-        // Cabeçalho da receita
-        echo "<div class='cabecalho-receita'>";
-        echo "<img src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png' alt='Cruz Vermelha' />";
-        echo "<span class='titulo'>Receita Médica</span>";
-        echo "<span style='font-size:13px;color:#888;'>SIRF</span>";
-        echo "</div>";
-        // Dados do paciente
-        echo "<div class='dados-paciente'><b>Paciente:</b> ".htmlspecialchars($rec['nome_paciente'])."<br>";
-        echo "<b>CPF:</b> ".htmlspecialchars($rec['cpf'])."<br>";
-        echo "<b>Data de Nascimento:</b> ".(isset($rec['data_nascimento']) ? date('d/m/Y', strtotime($rec['data_nascimento'])) : '')."<br>";
-        echo "<b>Data de Emissão:</b> ".date('d/m/Y', strtotime($rec['data_emissao']))."</div>";
-        // Descrição da receita
-        echo "<div class='dados-receita'><b>Descrição:</b><div class='descricao-receita'>".nl2br(htmlspecialchars($rec['descricao']))."</div></div>";
-        // Assinatura do médico
-        echo "<div class='assinatura'>";
-        echo "<div class='linha'></div>";
-        echo "<span class='nome-medico'>".htmlspecialchars($rec['nome_medico'])."</span><br>";
-        echo "<span class='crm'>CRM: ".htmlspecialchars($rec['crm'])."</span><br>";
-        echo "<span style='font-size:13px;color:#888;'>Assinatura Digital:</span><br>";
-        echo "<span style='font-size:13px;'>".nl2br(htmlspecialchars($rec['assinatura_digital']))."</span>";
-        echo "</div>";
-        // Botões de ação: imprimir, enviar por e-mail, voltar
-        echo "<div class='actions'>";
-        echo "<button onclick=\"window.print()\">Imprimir</button>";
-        echo "<form method='post' style='display:inline;'>"
-            . "<input type='hidden' name='id' value='" . $id . "'>"
-            . "<button type='submit' name='enviar_email' style='background:#28a745;border:none;color:#fff;padding:12px 24px;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer;transition:background 0.2s;margin:5px 8px 0 0;'>Enviar por E-mail</button>"
-            . "</form>";
-        echo "<a href='medico.php' class='btn-link' style='background:#ccc;color:#2c3e50;'>Voltar</a>";
-        echo "</div>";
-    } else {
-        echo $mensagem_email;
-    }
-    $stmt->close();
-    $conexao->close();
-    echo "</div></body></html>";
-    exit();
-}
 ?>
+</div>
+</body>
+</html>

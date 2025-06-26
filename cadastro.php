@@ -13,32 +13,67 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($tipo == 'paciente') $tipo = 'paciente';
     $crm = $_POST['crm'] ?? null;
     $cpf = $_POST['cpf'] ?? null;
-    // Insere usuário na tabela usuarios
-    $sql = "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)";
-    $stmt = $conexao->prepare($sql);
-    $stmt->bind_param("ssss", $nome, $email, $senha, $tipo);
-    if ($stmt->execute()) {
-        $usuario_id = $conexao->insert_id;
-        $stmt->close();
-        // Se for médico, insere na tabela medicos
+
+    // Verifica se já existe usuário com este e-mail
+    $sql_check = "SELECT id FROM usuarios WHERE email = ?";
+    $stmt_check = $conexao->prepare($sql_check);
+    $stmt_check->bind_param("s", $email);
+    $stmt_check->execute();
+    $stmt_check->store_result();
+    if ($stmt_check->num_rows > 0) {
+        // Usuário já existe, atualiza dados
+        $stmt_check->bind_result($usuario_id_existente);
+        $stmt_check->fetch();
+        $stmt_check->close();
+        // Atualiza nome e senha
+        $sqlUpdateUser = "UPDATE usuarios SET nome = ?, senha = ? WHERE id = ?";
+        $stmtUpdateUser = $conexao->prepare($sqlUpdateUser);
+        $stmtUpdateUser->bind_param("ssi", $nome, $senha, $usuario_id_existente);
+        $stmtUpdateUser->execute();
+        $stmtUpdateUser->close();
         if ($tipo == 'médico') {
-            $sql2 = "INSERT INTO medicos (id, crm) VALUES (?, ?)";
-            $stmt2 = $conexao->prepare($sql2);
-            $stmt2->bind_param("is", $usuario_id, $crm);
-            $stmt2->execute();
-            $stmt2->close();
+            // Atualiza CRM se for médico
+            $sqlUpdateMedico = "UPDATE medicos SET crm = ? WHERE id = ?";
+            $stmtUpdateMedico = $conexao->prepare($sqlUpdateMedico);
+            $stmtUpdateMedico->bind_param("si", $crm, $usuario_id_existente);
+            $stmtUpdateMedico->execute();
+            $stmtUpdateMedico->close();
         } else {
-            // Se for paciente, insere na tabela pacientes
-            $sql2 = "INSERT INTO pacientes (id, cpf) VALUES (?, ?)";
-            $stmt2 = $conexao->prepare($sql2);
-            $stmt2->bind_param("is", $usuario_id, $cpf);
-            $stmt2->execute();
-            $stmt2->close();
+            // Atualiza CPF e email se for paciente
+            $sqlUpdatePaciente = "UPDATE pacientes SET cpf = ?, email = ? WHERE id = ?";
+            $stmtUpdatePaciente = $conexao->prepare($sqlUpdatePaciente);
+            $stmtUpdatePaciente->bind_param("ssi", $cpf, $email, $usuario_id_existente);
+            $stmtUpdatePaciente->execute();
+            $stmtUpdatePaciente->close();
         }
-        $mensagem = "<div class='mensagem' style='color:green;'>Usuário cadastrado com sucesso!</div>";
+        $mensagem = "<div class='mensagem' style='color:green;'>Dados atualizados com sucesso!</div>";
     } else {
-        $mensagem = "<div class='mensagem'>Erro ao cadastrar: " . $stmt->error . "</div>";
-        $stmt->close();
+        $stmt_check->close();
+        // Não existe, faz o cadastro normalmente
+        $sql = "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)";
+        $stmt = $conexao->prepare($sql);
+        $stmt->bind_param("ssss", $nome, $email, $senha, $tipo);
+        if ($stmt->execute()) {
+            $usuario_id = $conexao->insert_id;
+            $stmt->close();
+            if ($tipo == 'médico') {
+                $sql2 = "INSERT INTO medicos (id, crm) VALUES (?, ?)";
+                $stmt2 = $conexao->prepare($sql2);
+                $stmt2->bind_param("is", $usuario_id, $crm);
+                $stmt2->execute();
+                $stmt2->close();
+            } else {
+                $sql2 = "INSERT INTO pacientes (id, cpf, email) VALUES (?, ?, ?)";
+                $stmt2 = $conexao->prepare($sql2);
+                $stmt2->bind_param("iss", $usuario_id, $cpf, $email);
+                $stmt2->execute();
+                $stmt2->close();
+            }
+            $mensagem = "<div class='mensagem' style='color:green;'>Usuário cadastrado com sucesso!</div>";
+        } else {
+            $mensagem = "<div class='mensagem'>Erro ao cadastrar: " . $stmt->error . "</div>";
+            $stmt->close();
+        }
     }
     $conexao->close();
 }
