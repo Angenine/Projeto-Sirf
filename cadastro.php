@@ -1,22 +1,26 @@
 <?php
+// Página de cadastro de usuários (médico ou paciente)
 include('conexao.php');
 $tipo_usuario = $_GET['tipo'] ?? '';
 $mensagem = '';
+// Processa o formulário de cadastro
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nome = $_POST['nome'];
     $email = $_POST['email'];
-    $senha = password_hash($_POST['senha'], PASSWORD_DEFAULT);
+    $senha = password_hash($_POST['senha'], PASSWORD_DEFAULT); // Criptografa a senha
     $tipo = $_POST['tipo'];
     if ($tipo == 'medico') $tipo = 'médico';
     if ($tipo == 'paciente') $tipo = 'paciente';
     $crm = $_POST['crm'] ?? null;
     $cpf = $_POST['cpf'] ?? null;
+    // Insere usuário na tabela usuarios
     $sql = "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)";
     $stmt = $conexao->prepare($sql);
     $stmt->bind_param("ssss", $nome, $email, $senha, $tipo);
     if ($stmt->execute()) {
         $usuario_id = $conexao->insert_id;
         $stmt->close();
+        // Se for médico, insere na tabela medicos
         if ($tipo == 'médico') {
             $sql2 = "INSERT INTO medicos (id, crm) VALUES (?, ?)";
             $stmt2 = $conexao->prepare($sql2);
@@ -24,6 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt2->execute();
             $stmt2->close();
         } else {
+            // Se for paciente, insere na tabela pacientes
             $sql2 = "INSERT INTO pacientes (id, cpf) VALUES (?, ?)";
             $stmt2 = $conexao->prepare($sql2);
             $stmt2->bind_param("is", $usuario_id, $cpf);
@@ -45,7 +50,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <style>
         body {
-            background: #eaf2f8;
+            background: #f4f6f8;
             font-family: Arial, Helvetica, sans-serif;
             margin: 0;
             padding: 0;
@@ -61,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         h2 {
             text-align: center;
-            color: #007bff;
+            color: #008080;
             margin-bottom: 25px;
         }
         label {
@@ -81,7 +86,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         button {
             width: 100%;
-            background: #3498db;
+            background: #008B8B;
             color: #fff;
             border: none;
             padding: 12px;
@@ -92,18 +97,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             transition: background 0.2s;
         }
         button:hover {
-            background: #2980b9;
+            background: #008080;
         }
         .login-link {
             text-align: center;
             margin-top: 12px;
         }
         .login-link a {
-            color: #3498db;
-            text-decoration: none;
+            color: #008B8B;
         }
         .login-link a:hover {
             text-decoration: underline;
+            color: #008080;
         }
         .mensagem {
             text-align: center;
@@ -121,6 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="container">
         <h2>Cadastro</h2>
         <?= $mensagem ?>
+        <!-- Formulário de cadastro -->
         <form method="POST" action="cadastro.php<?= $tipo_usuario ? '?tipo=' . $tipo_usuario : '' ?>">
             <label>Nome:</label>
             <input type="text" name="nome" required>
@@ -144,6 +150,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <button type="submit">Cadastrar</button>
         </form>
         <script>
+        // Exibe campos adicionais conforme o tipo de usuário
         function mostrarCamposAdicionais() {
             var tipo = document.getElementById('tipo').value;
             document.getElementById('campo_crm').style.display = (tipo === 'medico' || tipo === 'médico') ? 'block' : 'none';

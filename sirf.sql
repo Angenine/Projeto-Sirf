@@ -36,6 +36,7 @@ CREATE TABLE receitas (
     descricao TEXT NOT NULL,
     data_emissao DATE NOT NULL,
     assinatura_digital VARCHAR(255) NOT NULL,
+    excluida_medico TINYINT(1) DEFAULT 0,
     FOREIGN KEY (cpf) REFERENCES pacientes(cpf) ON DELETE CASCADE,
     FOREIGN KEY (crm) REFERENCES medicos(crm) ON DELETE CASCADE
 );

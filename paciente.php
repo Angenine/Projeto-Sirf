@@ -1,6 +1,8 @@
 <?php
+// Página do paciente: exibe as receitas do paciente logado
 session_start();
 include('conexao.php');
+// Verifica se o usuário está logado e é paciente
 if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['tipo'] != 'paciente') {
     header("Location: login.php");
     exit();
@@ -15,10 +17,10 @@ if (isset($_SESSION['usuario']['id'])) {
     $stmtCpf->fetch();
     $stmtCpf->close();
 }
-// Filtros
+// Filtros de pesquisa
 $filtro_medico = $_GET['medico'] ?? '';
 $filtro_vencida = $_GET['vencida'] ?? '';
-// Monta query de receitas
+// Monta query de receitas do paciente
 $sql = "SELECT r.*, m.crm, u.nome as nome_medico, DATE_ADD(r.data_emissao, INTERVAL 1 MONTH) AS data_validade FROM receitas r
         JOIN medicos m ON r.crm = m.crm
         JOIN usuarios u ON m.id = u.id
@@ -50,7 +52,7 @@ $conexao->close();
     <title>SIRF - Paciente</title>
     <style>
         body {
-            background: #eaf2f8;
+            background: #f4f6f8;
             font-family: Arial, Helvetica, sans-serif;
             margin: 0;
             padding: 0;
@@ -65,7 +67,7 @@ $conexao->close();
             box-shadow: 0 4px 24px rgba(0,0,0,0.10);
         }
         h2 {
-            color: #007bff;
+            color: #008080;
             margin-bottom: 18px;
             text-align: center;
         }
@@ -74,13 +76,28 @@ $conexao->close();
             margin-bottom: 30px;
         }
         nav a {
-            color: #3498db;
+            color: #008B8B;
             text-decoration: none;
             margin: 0 10px;
             font-weight: bold;
         }
         nav a:hover {
             text-decoration: underline;
+            color: #008080;
+        }
+        button {
+            background: #008B8B;
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover, .btn-link:hover {
+            background: #008080;
         }
         .filtros {
             display: flex;
@@ -91,12 +108,12 @@ $conexao->close();
         }
         .filtros label {
             font-weight: bold;
-            color: #333;
+            color: #008B8B;
         }
         .filtros input, .filtros select {
             padding: 7px 10px;
             border-radius: 6px;
-            border: 1px solid #ccc;
+            border: 1px solid #008B8B;
             font-size: 15px;
         }
         table {
@@ -112,7 +129,7 @@ $conexao->close();
             text-align: left;
         }
         th {
-            background: #3498db;
+            background: #008B8B;
             color: #fff;
         }
         tr:last-child td {
@@ -137,7 +154,7 @@ $conexao->close();
                 padding: 10px 4vw;
             }
             th {
-                background: #3498db;
+                background: #008B8B;
                 color: #fff;
             }
         }
@@ -150,6 +167,7 @@ $conexao->close();
             <a href="paciente.php">Página do Paciente</a> |
             <a href="logout.php">Sair</a>
         </nav>
+        <!-- Filtros de pesquisa -->
         <form class="filtros" method="get" action="">
             <label for="medico">Filtrar por médico:</label>
             <input type="text" name="medico" id="medico" value="<?= htmlspecialchars($filtro_medico) ?>" placeholder="Nome do médico">
@@ -161,6 +179,7 @@ $conexao->close();
             </select>
             <button type="submit">Filtrar</button>
         </form>
+        <!-- Tabela de receitas do paciente -->
         <table>
             <thead>
                 <tr>

@@ -1,12 +1,19 @@
 <?php
+// Inclui o arquivo de conexão com o banco de dados
 include('conexao.php');
+// Inicia a sessão para controle de login
 session_start();
+// Variáveis para mensagens de feedback
 $mensagem_receita = '';
 $mensagem_paciente = '';
 
+// ----------------------
+// PROCESSAMENTO DE FORMULÁRIOS (CADASTRO DE RECEITA E PACIENTE)
+// ----------------------
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Cadastro de receita
     if (isset($_POST['acao']) && $_POST['acao'] == 'receita') {
+        // Recebe dados do formulário de receita
         $cpf_paciente = $_POST['cpf_paciente'];
         $nome_medico = $_POST['nome_medico'];
         $crm = $_POST['crm'];
@@ -42,6 +49,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Cadastro de paciente
     if (isset($_POST['acao']) && $_POST['acao'] == 'paciente') {
+        // Recebe dados do formulário de paciente
         $nome_paciente = $_POST['nome_paciente'];
         $cpf_novo = $_POST['cpf_novo'];
         $data_nascimento = $_POST['data_nascimento'];
@@ -67,29 +75,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->close();
         } else {
             // CPF não existe, faz INSERT
-            $sql = "INSERT INTO pacientes (nome, cpf, data_nascimento, telefone) VALUES (?, ?, ?, ?)";
-            $stmt = $conexao->prepare($sql);
-            $stmt->bind_param("ssss", $nome_paciente, $cpf_novo, $data_nascimento, $telefone);
-            if ($stmt->execute()) {
-                $mensagem_paciente .= "<div class='mensagem-sucesso'>Paciente cadastrado com sucesso!</div>";
+            // Corrigido: não existe campo 'nome' em pacientes, só em usuarios
+            // Primeiro, cria o usuario
+            $sql_usuario = "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, '', '', 'paciente')";
+            $stmt_usuario = $conexao->prepare($sql_usuario);
+            $stmt_usuario->bind_param("s", $nome_paciente);
+            if ($stmt_usuario->execute()) {
+                $id_usuario = $stmt_usuario->insert_id;
+                $sql = "INSERT INTO pacientes (id, cpf, data_nascimento, telefone) VALUES (?, ?, ?, ?)";
+                $stmt = $conexao->prepare($sql);
+                $stmt->bind_param("isss", $id_usuario, $cpf_novo, $data_nascimento, $telefone);
+                if ($stmt->execute()) {
+                    $mensagem_paciente .= "<div class='mensagem-sucesso'>Paciente cadastrado com sucesso!</div>";
+                } else {
+                    $mensagem_paciente .= "<div class='mensagem-erro'>Erro ao cadastrar paciente: " . $stmt->error . "</div>";
+                }
+                $stmt->close();
             } else {
-                $mensagem_paciente .= "<div class='mensagem-erro'>Erro ao cadastrar paciente: " . $stmt->error . "</div>";
+                $mensagem_paciente .= "<div class='mensagem-erro'>Erro ao cadastrar usuário: " . $stmt_usuario->error . "</div>";
             }
-            $stmt->close();
+            $stmt_usuario->close();
         }
         $stmt_check->close();
     }
 }
 
-// Filtros para pesquisa de receitas emitidas
+// ----------------------
+// FILTROS DE PESQUISA E EXCLUSÃO DE RECEITA
+// ----------------------
 $cpf_filtro = $_GET['cpf_filtro'] ?? '';
 $status_filtro = $_GET['status_filtro'] ?? '';
 
 // Excluir receita (soft delete: só para o médico, não para o paciente)
 if (isset($_GET['excluir_receita'])) {
     $id_receita = intval($_GET['excluir_receita']);
-    // Soft delete: marca como excluida para o médico (adiciona campo excluida_medico se não existir)
-    $conexao->query("ALTER TABLE receitas ADD COLUMN excluida_medico TINYINT(1) DEFAULT 0") or $conexao->error;
+    // Soft delete: marca como excluida para o médico
     $sql = "UPDATE receitas SET excluida_medico = 1 WHERE id = ?";
     $stmt = $conexao->prepare($sql);
     $stmt->bind_param("i", $id_receita);
@@ -99,11 +119,13 @@ if (isset($_GET['excluir_receita'])) {
     exit();
 }
 
-// Editar receita
+// ----------------------
+// EDIÇÃO DE RECEITA
+// ----------------------
 if (isset($_GET['editar_receita'])) {
     $id_receita = intval($_GET['editar_receita']);
     // Busca dados da receita
-    $sql = "SELECT r.*, p.nome as nome_paciente FROM receitas r JOIN pacientes p ON r.cpf = p.cpf WHERE r.id = ?";
+    $sql = "SELECT r.*, u.nome as nome_paciente FROM receitas r JOIN pacientes p ON r.cpf = p.cpf JOIN usuarios u ON p.id = u.id WHERE r.id = ?";
     $stmt = $conexao->prepare($sql);
     $stmt->bind_param("i", $id_receita);
     $stmt->execute();
@@ -151,6 +173,9 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
     <meta charset="UTF-8">
     <title>Painel do Médico</title>
     <style>
+        /* ----------------------
+           ESTILOS GERAIS E LAYOUT
+        ---------------------- */
         body {
             background: #f4f6f8;
             font-family: Arial, Helvetica, sans-serif;
@@ -180,7 +205,7 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
             margin-bottom: 20px;
         }
         h2 {
-            color: #007bff;
+            color: #008080;
             margin-bottom: 18px;
             text-align: center;
         }
@@ -197,11 +222,10 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 15px;
-            background: #fff;
+            background: #f9f9f9;
         }
         button, .btn-link {
-            width: 100%;
-            background: #007bff;
+            background: #008B8B;
             color: #fff;
             border: none;
             padding: 12px;
@@ -216,7 +240,11 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
             margin: 5px;
         }
         button:hover, .btn-link:hover {
-            background: #0056b3;
+            background: #008080;
+        }
+        th {
+            background: #008B8B;
+            color: #fff;
         }
         .mensagem-sucesso {
             color: #28a745;
@@ -248,7 +276,7 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
             height: 40px;
         }
         th {
-            background: #007bff;
+            background: #008B8B;
             color: #fff;
             text-align: center;
         }
@@ -279,11 +307,13 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
 <body>
     <div class="container">
         <div style="width:100%;text-align:right;margin-bottom:10px;">
+            <!-- Botão de logout -->
             <a href="logout.php" class="btn-link" style="background:#ccc;color:#2c3e50;width:auto;display:inline-block;padding:8px 18px;">Sair</a>
         </div>
         <div class="card">
             <h2>Cadastro de Paciente</h2>
             <?php if (!empty($mensagem_paciente)) echo $mensagem_paciente; ?>
+            <!-- Formulário de cadastro/edição de paciente -->
             <form method="POST" action="medico.php">
                 <input type="hidden" name="acao" value="paciente">
                 <label for="nome_paciente">Nome do Paciente:</label>
@@ -300,44 +330,40 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
         <div class="card">
             <h2>Cadastro de Receita</h2>
             <?php if (!empty($mensagem_receita)) echo $mensagem_receita; ?>
+            <!-- Formulário de cadastro de receita -->
             <form method="POST" action="medico.php">
                 <input type="hidden" name="acao" value="receita">
-
                 <label for="cpf_paciente">CPF do Paciente:</label>
                 <input type="text" id="cpf_paciente" name="cpf_paciente" maxlength="14" required placeholder="CPF">
-
                 <label for="nome_medico">Nome do Médico:</label>
                 <input type="text" id="nome_medico" name="nome_medico" required placeholder="Nome completo do médico">
-
                 <label for="crm">CRM:</label>
                 <input type="text" id="crm" name="crm" required placeholder="Ex: CRM-SP 123456">
-
                 <label for="data_emissao">Data da Emissão:</label>
                 <input type="date" id="data_emissao" name="data_emissao" required>
-
                 <label for="descricao">Descrição da Receita:</label>
                 <textarea id="descricao" name="descricao" rows="4" required placeholder="Medicamento, posologia, quantidade..."></textarea>
-
                 <label for="assinatura_digital">Assinatura Digital (ICP-Brasil):</label>
                 <textarea id="assinatura_digital" name="assinatura_digital" rows="3" required placeholder="Conteúdo da assinatura digital..."></textarea>
-
                 <button type="submit">Cadastrar Receita</button>
             </form>
         </div>
 
         <?php
-        // Após os cards de cadastro, exibe as receitas do médico
-
-        // Listar receitas emitidas pelo médico logado
+        // ----------------------
+        // LISTAGEM DE RECEITAS EMITIDAS PELO MÉDICO LOGADO
+        // ----------------------
         if (isset($_SESSION['usuario']['id'])) {
             $id_medico = $_SESSION['usuario']['id'];
-            $sql_receitas = "SELECT r.id, r.cpf, u.nome as nome_paciente, p.data_nascimento, p.telefone, r.nome_medico, r.crm, r.data_emissao, r.descricao, r.assinatura_digital, DATE_ADD(r.data_emissao, INTERVAL 1 MONTH) AS data_validade FROM receitas r JOIN medicos m ON r.crm = m.crm JOIN pacientes p ON r.cpf = p.cpf JOIN usuarios u ON p.id = u.id WHERE m.id = ? ORDER BY r.data_emissao DESC";
+            // Consulta receitas emitidas pelo médico logado
+            $sql_receitas = "SELECT r.id, r.cpf, u.nome as nome_paciente, p.data_nascimento, p.telefone, r.nome_medico, r.crm, r.data_emissao, r.descricao, r.assinatura_digital, DATE_ADD(r.data_emissao, INTERVAL 1 MONTH) AS data_validade FROM receitas r JOIN medicos m ON r.crm = m.crm JOIN pacientes p ON r.cpf = p.cpf JOIN usuarios u ON p.id = u.id WHERE m.id = ? AND r.excluida_medico = 0 ORDER BY r.data_emissao DESC";
             $stmt_receitas = $conexao->prepare($sql_receitas);
             $stmt_receitas->bind_param("i", $id_medico);
             $stmt_receitas->execute();
             $result_receitas = $stmt_receitas->get_result();
             echo '<div class="card" style="margin-top:30px;">';
             echo '<h2>Receitas Emitidas</h2>';
+            // Filtros de busca
             echo '<form method="get" style="margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">';
             echo '<label for="cpf_filtro">Filtrar por CPF:</label>';
             echo '<input type="text" name="cpf_filtro" id="cpf_filtro" value="' . htmlspecialchars($cpf_filtro) . '" placeholder="CPF do paciente" style="width:150px;">';
@@ -350,9 +376,11 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
             echo '<button type="submit" style="width:70px;padding:7px 0 7px 0;font-size:14px;">Filtrar</button>';
             echo '</form>';
             if ($result_receitas->num_rows > 0) {
+                // Tabela de receitas
                 echo '<table style="width:100%;border-collapse:collapse;background:#f9f9f9;">';
                 echo '<thead><tr><th>Paciente</th><th>CPF</th><th>Data Nasc.</th><th>Telefone</th><th>Data Emissão</th><th>Validade</th><th>Status</th><th>Descrição</th><th>Ações</th></tr></thead><tbody>';
                 while($rec = $result_receitas->fetch_assoc()) {
+                    // Calcula status da receita (válida ou vencida)
                     $status = (strtotime($rec['data_validade']) < strtotime(date('Y-m-d'))) ? 'Vencida' : 'Válida';
                     $classe = $status == 'Vencida' ? 'vencida' : 'valida';
                     echo '<tr>';
@@ -365,8 +393,10 @@ if (isset($_GET['salvar_edicao_receita']) && $_SERVER['REQUEST_METHOD'] === 'POS
                     echo '<td class="' . $classe . '">' . $status . '</td>';
                     echo '<td>' . nl2br(htmlspecialchars($rec['descricao'])) . '</td>';
                     echo '<td>';
-                    echo '<a href="medico.php?editar_receita=' . $rec['id'] . '" class="btn-link" style="color:#fff;background:#007bff;padding:4px 10px;border-radius:4px;margin-right:4px;width:80px;display:inline-block;text-align:center;">Editar</a>';
-                    echo '<a href="medico.php?excluir_receita=' . $rec['id'] . '" class="btn-link" style="color:#fff;background:#d9534f;padding:4px 10px;border-radius:4px;width:80px;display:inline-block;text-align:center;" onclick="return confirm(\'Tem certeza que deseja excluir esta receita?\');">Excluir</a>';
+                    // Botão Editar: cor #20B2AA
+                    echo '<a href="medico.php?editar_receita=' . $rec['id'] . '" class="btn-link" style="background:#20B2AA;color:#fff;padding:4px 10px;border-radius:4px;margin-right:4px;width:80px;display:inline-block;text-align:center;transition:background 0.2s;" onmouseover="this.style.background=\'#008080\'" onmouseout="this.style.background=\'#20B2AA\'">Editar</a>';
+                    // Botão Compartilhar: cor #20B2AA
+                    echo '<a href="salvar_receita.php?id=' . $rec['id'] . '" class="btn-link" style="background:#20B2AA;color:#fff;padding:4px 10px;border-radius:4px;width:110px;display:inline-block;text-align:center;transition:background 0.2s;" onmouseover="this.style.background=\'#008080\'" onmouseout="this.style.background=\'#20B2AA\'">Compartilhar</a>';
                     echo '</td>';
                     echo '</tr>';
                 }

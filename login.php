@@ -1,4 +1,5 @@
 <?php
+// Página de login do sistema SIRF
 include('conexao.php');
 session_start();
 
@@ -6,25 +7,25 @@ $erro = "";
 $sucesso = "";
 $tipo_usuario = isset($_GET['tipo']) ? $_GET['tipo'] : '';
 
-// LOGIN
+// LOGIN: processa o formulário de login
 if (isset($_POST['acao']) && $_POST['acao'] == 'login') {
     $email = $_POST['email'];
     $senha = $_POST['senha'];
     $tipo = $tipo_usuario;
 
-    if ($tipo == 'medico' || $tipo == 'médico') $tipo = 'médico';
-    if ($tipo == 'paciente') $tipo = 'paciente';
-
-    $sql = "SELECT * FROM usuarios WHERE email = ? AND tipo = ?";
+    // Busca usuário pelo e-mail
+    $sql = "SELECT * FROM usuarios WHERE email = ?";
     $stmt = $conexao->prepare($sql);
-    $stmt->bind_param("ss", $email, $tipo);
+    $stmt->bind_param("s", $email);
     $stmt->execute();
     $resultado = $stmt->get_result();
 
     if ($resultado->num_rows == 1) {
         $usuario = $resultado->fetch_assoc();
+        // Verifica a senha
         if (password_verify($senha, $usuario['senha'])) {
             $_SESSION['usuario'] = $usuario;
+            // Redireciona conforme o tipo de usuário
             if ($usuario['tipo'] == 'medico' || $usuario['tipo'] == 'médico') {
                 header("Location: medico.php");
             } else {
@@ -47,7 +48,7 @@ if (isset($_POST['acao']) && $_POST['acao'] == 'login') {
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: #eaf2f8;
+            background: #f4f6f8;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -65,7 +66,7 @@ if (isset($_POST['acao']) && $_POST['acao'] == 'login') {
         }
         h2 {
             margin-bottom: 20px;
-            color: #2c3e50;
+            color: #008080;
         }
         label {
             display: block;
@@ -81,7 +82,7 @@ if (isset($_POST['acao']) && $_POST['acao'] == 'login') {
             border-radius: 8px;
         }
         button {
-            background-color: #3498db;
+            background-color: #008B8B;
             color: white;
             border: none;
             padding: 12px 20px;
@@ -93,21 +94,23 @@ if (isset($_POST['acao']) && $_POST['acao'] == 'login') {
             transition: background-color 0.3s;
         }
         button:hover {
-            background-color: #2980b9;
+            background-color: #008080;
         }
         .login-link {
             text-align: center;
             margin-top: 12px;
         }
         .login-link a {
-            color: #3498db;
+            color: #008B8B;
             text-decoration: none;
         }
         .login-link a:hover {
             text-decoration: underline;
+            color: #008080;
         }
     </style>
     <script>
+        // Função para redirecionar para a página de cadastro
         function mostrarCadastro() {
             window.location.href = 'cadastro.php' + ("<?= $tipo_usuario ?>" ? ('?tipo=<?= $tipo_usuario ?>') : '');
         }
@@ -119,6 +122,7 @@ if (isset($_POST['acao']) && $_POST['acao'] == 'login') {
         <?php if ($erro) echo "<p style='color:red;'>$erro</p>"; ?>
         <?php if ($sucesso) echo "<p style='color:green;'>$sucesso</p>"; ?>
         <div id="form-login">
+            <!-- Formulário de login -->
             <form method="POST" action="login.php?tipo=<?= $tipo_usuario ?>">
                 <input type="hidden" name="acao" value="login">
                 <label for="email">Email:</label>
